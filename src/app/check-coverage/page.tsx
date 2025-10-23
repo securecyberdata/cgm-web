@@ -62,34 +62,39 @@ export default function CheckCoverage() {
     mode: 'onChange',
   });
 
-  const validateCurrentStep = (data: Partial<FormData>): boolean => {
+  const validateCurrentStep = (currentStepData: Partial<FormData>): boolean => {
     switch (currentStep) {
       case 0: // Insurance Type
-        return !!data.insuranceType;
+        return !!currentStepData.insuranceType;
       case 1: // Medical Info
-        return !!(data.diabetesType && data.currentMonitoring);
+        return !!(currentStepData.diabetesType && currentStepData.currentMonitoring);
       case 2: // Doctor Info
         return true; // Doctor info is optional
       case 3: // Insurance Card
-        return data.insuranceType === 'none' || !!data.memberId;
+        return formData.insuranceType === 'none' || !!currentStepData.memberId;
       case 4: // Contact & Consent
-        return !!(data.firstName && data.lastName && data.email && data.phone && 
-                 data.hipaaConsent && data.tcpaConsent && data.benefitsCheckConsent);
+        return !!(currentStepData.firstName && currentStepData.lastName && currentStepData.email && currentStepData.phone && 
+                 currentStepData.hipaaConsent && currentStepData.tcpaConsent && currentStepData.benefitsCheckConsent);
       default:
         return true;
     }
   };
 
   const onSubmit = async (data: FormData) => {
+    console.log('Form submitted with data:', data);
+    console.log('Current step:', currentStep);
+    
     const updatedFormData = { ...formData, ...data };
     setFormData(updatedFormData);
 
     if (currentStep < steps.length - 1) {
       // Validate current step before moving to next
-      if (validateCurrentStep(updatedFormData)) {
+      const isValid = validateCurrentStep(data);
+      console.log('Step validation result:', isValid);
+      
+      if (isValid) {
         setCurrentStep(currentStep + 1);
-        // Reset form for next step
-        form.reset();
+        // Don't reset form - keep values for next step
       } else {
         // Show validation error
         alert('Please fill in all required fields before proceeding.');
