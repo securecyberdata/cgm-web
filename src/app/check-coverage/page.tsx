@@ -8,16 +8,16 @@ import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 
 const insuranceTypeSchema = z.object({
   insuranceType: z.enum(['medicare', 'ppo', 'none'], {
-    required_error: 'Please select your insurance type',
+    message: 'Please select your insurance type',
   }),
 });
 
 const medicalInfoSchema = z.object({
   diabetesType: z.enum(['type1', 'type2', 'gestational', 'other'], {
-    required_error: 'Please select your diabetes type',
+    message: 'Please select your diabetes type',
   }),
   currentMonitoring: z.enum(['fingersticks', 'cgm', 'both', 'none'], {
-    required_error: 'Please select your current monitoring method',
+    message: 'Please select your current monitoring method',
   }),
   hypoglycemicEvents: z.boolean(),
   insulinUse: z.boolean(),
