@@ -6,13 +6,13 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 
-const insuranceTypeSchema = z.object({
+const formSchema = z.object({
+  // Insurance Type
   insuranceType: z.enum(['medicare', 'ppo', 'none'], {
     message: 'Please select your insurance type',
   }),
-});
-
-const medicalInfoSchema = z.object({
+  
+  // Medical Info
   diabetesType: z.enum(['type1', 'type2', 'gestational', 'other'], {
     message: 'Please select your diabetes type',
   }),
@@ -21,21 +21,18 @@ const medicalInfoSchema = z.object({
   }),
   hypoglycemicEvents: z.boolean(),
   insulinUse: z.boolean(),
-});
-
-const doctorInfoSchema = z.object({
+  
+  // Doctor Info
   hasDoctor: z.boolean(),
   doctorName: z.string().optional(),
   doctorCity: z.string().optional(),
-});
-
-const insuranceCardSchema = z.object({
+  
+  // Insurance Card
   memberId: z.string().min(1, 'Member ID is required'),
   insuranceCardFront: z.any().optional(),
   insuranceCardBack: z.any().optional(),
-});
-
-const contactConsentSchema = z.object({
+  
+  // Contact & Consent
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
   email: z.string().email('Valid email is required'),
@@ -45,18 +42,14 @@ const contactConsentSchema = z.object({
   benefitsCheckConsent: z.boolean().refine(val => val === true, 'Benefits check consent is required'),
 });
 
-type FormData = z.infer<typeof insuranceTypeSchema> & 
-  z.infer<typeof medicalInfoSchema> & 
-  z.infer<typeof doctorInfoSchema> & 
-  z.infer<typeof insuranceCardSchema> & 
-  z.infer<typeof contactConsentSchema>;
+type FormData = z.infer<typeof formSchema>;
 
 const steps = [
-  { id: 'insurance', title: 'Insurance Type', schema: insuranceTypeSchema },
-  { id: 'medical', title: 'Medical Info', schema: medicalInfoSchema },
-  { id: 'doctor', title: 'Doctor Info', schema: doctorInfoSchema },
-  { id: 'card', title: 'Insurance Card', schema: insuranceCardSchema },
-  { id: 'contact', title: 'Contact & Consent', schema: contactConsentSchema },
+  { id: 'insurance', title: 'Insurance Type' },
+  { id: 'medical', title: 'Medical Info' },
+  { id: 'doctor', title: 'Doctor Info' },
+  { id: 'card', title: 'Insurance Card' },
+  { id: 'contact', title: 'Contact & Consent' },
 ];
 
 export default function CheckCoverage() {
@@ -65,16 +58,36 @@ export default function CheckCoverage() {
   const [isEligible, setIsEligible] = useState<boolean | null>(null);
 
   const form = useForm<FormData>({
-    resolver: zodResolver(steps[currentStep].schema),
+    resolver: zodResolver(formSchema),
     mode: 'onChange',
   });
+
+  const validateCurrentStep = (data: Partial<FormData>): boolean => {
+    switch (currentStep) {
+      case 0: // Insurance Type
+        return !!data.insuranceType;
+      case 1: // Medical Info
+        return !!(data.diabetesType && data.currentMonitoring);
+      case 2: // Doctor Info
+        return true; // Doctor info is optional
+      case 3: // Insurance Card
+        return data.insuranceType === 'none' || !!data.memberId;
+      case 4: // Contact & Consent
+        return !!(data.firstName && data.lastName && data.email && data.phone && 
+                 data.hipaaConsent && data.tcpaConsent && data.benefitsCheckConsent);
+      default:
+        return true;
+    }
+  };
 
   const onSubmit = (data: FormData) => {
     const updatedFormData = { ...formData, ...data };
     setFormData(updatedFormData);
 
     if (currentStep < steps.length - 1) {
-      setCurrentStep(currentStep + 1);
+      if (validateCurrentStep(updatedFormData)) {
+        setCurrentStep(currentStep + 1);
+      }
     } else {
       // Final submission - determine eligibility
       const eligible = determineEligibility(updatedFormData);
