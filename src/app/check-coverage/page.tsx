@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -53,6 +53,7 @@ const steps = [
 ];
 
 export default function CheckCoverage() {
+  // Version 2.0 - Fixed form logic
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<Partial<FormData>>({});
   const [isEligible, setIsEligible] = useState<boolean | null>(null);
@@ -62,10 +63,21 @@ export default function CheckCoverage() {
     mode: 'onChange',
   });
 
+  // Ensure component is mounted on client side
+  const [isMounted, setIsMounted] = useState(false);
+  
+  useEffect(() => {
+    setIsMounted(true);
+    console.log('CheckCoverage component mounted on Vercel');
+  }, []);
+
   const handleNext = () => {
     const formData = form.getValues();
+    console.log('=== FORM DEBUG ===');
     console.log('Current form data:', formData);
     console.log('Current step:', currentStep);
+    console.log('Form state:', form.formState);
+    console.log('==================');
     
     // Simple validation for each step
     let canProceed = false;
@@ -147,6 +159,22 @@ export default function CheckCoverage() {
       setCurrentStep(currentStep - 1);
     }
   };
+
+  // Prevent hydration issues
+  if (!isMounted) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-12">
+        <div className="mx-auto max-w-3xl px-6 lg:px-8">
+          <div className="bg-white rounded-lg shadow-lg p-8">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="mt-4 text-gray-600">Loading form...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (isEligible !== null) {
     return (
