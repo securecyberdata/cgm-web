@@ -62,71 +62,75 @@ export default function CheckCoverage() {
     mode: 'onChange',
   });
 
-  const validateCurrentStep = (currentStepData: Partial<FormData>): boolean => {
+  const handleNext = () => {
+    const formData = form.getValues();
+    console.log('Current form data:', formData);
+    console.log('Current step:', currentStep);
+    
+    // Simple validation for each step
+    let canProceed = false;
+    
     switch (currentStep) {
       case 0: // Insurance Type
-        return !!currentStepData.insuranceType;
+        canProceed = !!formData.insuranceType;
+        break;
       case 1: // Medical Info
-        return !!(currentStepData.diabetesType && currentStepData.currentMonitoring);
+        canProceed = !!(formData.diabetesType && formData.currentMonitoring);
+        break;
       case 2: // Doctor Info
-        return true; // Doctor info is optional
+        canProceed = true; // Optional
+        break;
       case 3: // Insurance Card
-        return formData.insuranceType === 'none' || !!currentStepData.memberId;
+        canProceed = formData.insuranceType === 'none' || !!formData.memberId;
+        break;
       case 4: // Contact & Consent
-        return !!(currentStepData.firstName && currentStepData.lastName && currentStepData.email && currentStepData.phone && 
-                 currentStepData.hipaaConsent && currentStepData.tcpaConsent && currentStepData.benefitsCheckConsent);
+        canProceed = !!(formData.firstName && formData.lastName && formData.email && formData.phone && 
+                       formData.hipaaConsent && formData.tcpaConsent && formData.benefitsCheckConsent);
+        break;
       default:
-        return true;
+        canProceed = true;
+    }
+    
+    if (canProceed) {
+      // Update stored data
+      const updatedFormData = { ...formData, ...formData };
+      setFormData(updatedFormData);
+      
+      if (currentStep < steps.length - 1) {
+        setCurrentStep(currentStep + 1);
+      } else {
+        // Final submission
+        handleFinalSubmit(updatedFormData);
+      }
+    } else {
+      alert('Please fill in all required fields before proceeding.');
     }
   };
 
-  const onSubmit = async (data: FormData) => {
-    console.log('Form submitted with data:', data);
-    console.log('Current step:', currentStep);
+  const handleFinalSubmit = async (data: FormData) => {
+    const eligible = determineEligibility(data);
     
-    const updatedFormData = { ...formData, ...data };
-    setFormData(updatedFormData);
-
-    if (currentStep < steps.length - 1) {
-      // Validate current step before moving to next
-      const isValid = validateCurrentStep(data);
-      console.log('Step validation result:', isValid);
+    try {
+      const response = await fetch('/api/submit-coverage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
       
-      if (isValid) {
-        setCurrentStep(currentStep + 1);
-        // Don't reset form - keep values for next step
-      } else {
-        // Show validation error
-        alert('Please fill in all required fields before proceeding.');
+      if (response.ok) {
+        console.log('Form submitted successfully');
       }
-    } else {
-      // Final submission - determine eligibility
-      const eligible = determineEligibility(updatedFormData);
-      
-      try {
-        // Submit to API endpoint
-        const response = await fetch('/api/submit-coverage', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(updatedFormData),
-        });
-        
-        if (response.ok) {
-          const result = await response.json();
-          console.log('Form submitted successfully:', result);
-        } else {
-          console.error('Failed to submit form');
-        }
-      } catch (error) {
-        console.error('Error submitting form:', error);
-        // Fallback to localStorage
-        localStorage.setItem('coverageFormData', JSON.stringify(updatedFormData));
-      }
-      
-      setIsEligible(eligible);
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      localStorage.setItem('coverageFormData', JSON.stringify(data));
     }
+    
+    setIsEligible(eligible);
+  };
+
+  const onSubmit = async (data: FormData) => {
+    // This is now just for form validation, actual submission handled by handleNext
+    console.log('Form validation passed:', data);
   };
 
   const determineEligibility = (data: Partial<FormData>): boolean => {
@@ -519,7 +523,8 @@ export default function CheckCoverage() {
               </button>
 
               <button
-                type="submit"
+                type="button"
+                onClick={handleNext}
                 className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
                 {currentStep === steps.length - 1 ? 'Submit' : 'Next'}
