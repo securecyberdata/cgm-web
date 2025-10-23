@@ -58,7 +58,7 @@ export default function CheckCoverage() {
   const [isEligible, setIsEligible] = useState<boolean | null>(null);
 
   const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(formSchema), // Using unified schema for all steps
     mode: 'onChange',
   });
 
