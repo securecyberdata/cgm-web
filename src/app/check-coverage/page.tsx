@@ -58,7 +58,7 @@ export default function CheckCoverage() {
   const [isEligible, setIsEligible] = useState<boolean | null>(null);
 
   const form = useForm<FormData>({
-    resolver: zodResolver(formSchema), // Using unified schema for all steps
+    resolver: zodResolver(formSchema),
     mode: 'onChange',
   });
 
@@ -80,17 +80,46 @@ export default function CheckCoverage() {
     }
   };
 
-  const onSubmit = (data: FormData) => {
+  const onSubmit = async (data: FormData) => {
     const updatedFormData = { ...formData, ...data };
     setFormData(updatedFormData);
 
     if (currentStep < steps.length - 1) {
+      // Validate current step before moving to next
       if (validateCurrentStep(updatedFormData)) {
         setCurrentStep(currentStep + 1);
+        // Reset form for next step
+        form.reset();
+      } else {
+        // Show validation error
+        alert('Please fill in all required fields before proceeding.');
       }
     } else {
       // Final submission - determine eligibility
       const eligible = determineEligibility(updatedFormData);
+      
+      try {
+        // Submit to API endpoint
+        const response = await fetch('/api/submit-coverage', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updatedFormData),
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          console.log('Form submitted successfully:', result);
+        } else {
+          console.error('Failed to submit form');
+        }
+      } catch (error) {
+        console.error('Error submitting form:', error);
+        // Fallback to localStorage
+        localStorage.setItem('coverageFormData', JSON.stringify(updatedFormData));
+      }
+      
       setIsEligible(eligible);
     }
   };
